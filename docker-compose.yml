@@ -1,0 +1,24 @@
+version: "3.4"
+
+networks:
+  default:
+
+services:
+  epg_api:
+    container_name: epg_api
+    build:
+      context: .
+      dockerfile: deployment/app/Dockerfile
+      args:
+        USER_ID: ${UID:-1000}
+        GROUP_ID: ${GID:-1000}
+        RUN_LEVEL: ${RUN_LEVEL}
+        PYTHON_VERSION: "3.10"
+      target: ${RUN_LEVEL}
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/opt/app
+    restart: unless-stopped
+    env_file:
+      - .env

@@ -1,6 +1,16 @@
 import re
 from operator import mul, add, sub, truediv
 
+from logger import logger
+
+
+def get_expression_from_query_param(query_params: str, keyword: str):
+    query_params = query_params.replace('%20', '')
+    expression = re.search(f'{keyword}=([\S0-9()+*/.-]*)&?', query_params).group(1)
+    if not expression:
+        raise ValueError("Can't parse phrase, please try another")
+    return expression
+
 
 def get_operator(value: str):
     translator = {
@@ -12,13 +22,16 @@ def get_operator(value: str):
     return translator[value]
 
 
-class Calculator:
+class Evaluator:
     def __init__(self, phrase: str):
         self.phrase = phrase
 
     def _eval_part(self, operator: str, expression: str, result_string: str) -> str:
         sub_expr = re.search(f'([\d\.\d]+)\{operator}([\d\.\d]+)', expression)
-        a, b = sub_expr.groups()
+        try:
+            a, b = sub_expr.groups()
+        except AttributeError as error:
+            raise ValueError('Incorrect number in expression')
         result = get_operator(operator)(float(a), float(b))
         result_string = result_string.replace(sub_expr.group(0), str(result), 1)
         return self.evaluate_expression(result_string)
@@ -54,7 +67,12 @@ class Calculator:
                     return self.remove_parentheses(phrase)
         return phrase
 
-    def get_result(self) -> str:
-        result = self.remove_parentheses(self.phrase)
-        result = self.evaluate_expression(result)
+    @logger.catch(reraise=True)
+    def eval(self) -> str:
+        try:
+            phrase_wo_parentheses = self.remove_parentheses(self.phrase)
+            result = float(self.evaluate_expression(phrase_wo_parentheses))
+        except RecursionError:
+            raise ValueError('Too big expression')
+        result = int(result) if result.is_integer() else result
         return f'{self.phrase} = {result}'
