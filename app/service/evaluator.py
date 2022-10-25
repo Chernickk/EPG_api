@@ -1,11 +1,15 @@
 import re
 from operator import mul, add, sub, truediv
 
+from urllib.parse import unquote
+
 from logger import logger
 
 
 def get_expression_from_query_param(query_params: str, keyword: str):
-    query_params = query_params.replace('%20', '')
+    query_params = unquote(query_params)
+    query_params = query_params.replace('"', '')
+    query_params = query_params.replace("'", '')
     expression = re.search(f'{keyword}=([\S0-9()+*/.-]*)&?', query_params).group(1)
     if not expression:
         raise ValueError("Can't parse phrase, please try another")
